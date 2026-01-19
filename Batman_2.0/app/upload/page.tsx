@@ -1,9 +1,8 @@
 'use client'
 
-import { uploadNote } from "../actions"; // Make sure this path is correct
+import { uploadNote } from "../actions"; 
 import { useState } from "react";
 
-// 👇 The most important line. It MUST say 'export default'
 export default function UploadPage() {
   const [status, setStatus] = useState("");
 
@@ -26,13 +25,24 @@ export default function UploadPage() {
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Title</label>
-            <input name="title" required placeholder="e.g. Module 1 Notes" className="w-full p-2 border rounded mt-1 text-black" />
+            <input 
+              name="title" 
+              required 
+              placeholder="e.g. Module 1 Notes" 
+              className="w-full p-2 border rounded mt-1 text-black" 
+            />
           </div>
 
           {/* Google Drive Link */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Drive Link (URL)</label>
-            <input name="url" required type="url" placeholder="https://drive.google.com..." className="w-full p-2 border rounded mt-1 text-black" />
+            <input 
+              name="url" 
+              required 
+              type="url" 
+              placeholder="https://drive.google.com..." 
+              className="w-full p-2 border rounded mt-1 text-black" 
+            />
           </div>
 
           {/* Subject Name */}
@@ -60,10 +70,14 @@ export default function UploadPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700">Semester</label>
               <select name="semester" className="w-full p-2 border rounded mt-1 text-black">
-                <option value="1">1st</option>
-                <option value="3">3rd</option>
-                <option value="5">5th</option>
-                <option value="7">7th</option>
+                <option value="p-cycle">P-Cycle (Physics)</option>
+                <option value="c-cycle">C-Cycle (Chemistry)</option>
+                <option value="3">3rd Semester</option>
+                <option value="4">4th Semester</option>
+                <option value="5">5th Semester</option>
+                <option value="6">6th Semester</option>
+                <option value="7">7th Semester</option>
+                <option value="8">8th Semester</option>
               </select>
             </div>
           </div>
@@ -78,7 +92,10 @@ export default function UploadPage() {
             </select>
           </div>
 
-          <button type="submit" className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-gray-800 transition">
+          <button 
+            type="submit" 
+            className="w-full bg-black text-white p-3 rounded-lg font-bold hover:bg-gray-800 transition"
+          >
             Upload to Database
           </button>
 

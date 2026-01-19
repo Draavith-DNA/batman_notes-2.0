@@ -1,105 +1,167 @@
-'use client'
+'use client';
 
-import { useState } from "react";
-import { completeOnboarding } from "./actions";
-import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { completeOnboarding } from "@/app/actions"; 
 
 export default function OnboardingForm() {
-  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
   const router = useRouter();
-  const { user } = useUser(); // Get the current user to pre-fill name if needed
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // Stop page from refreshing
+  // We use simple state for the inputs to make them controlled
+  const [formData, setFormData] = useState({
+    fullName: user?.fullName || "",
+    usn: "",
+    branch: "",
+    semester: "",
+    dob: "",
+    bio: "" // 🌟 The New Bio Field
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
 
-    const formData = new FormData(event.currentTarget);
-    const result = await completeOnboarding(formData);
+    try {
+      // 1. Create FormData object (Required by your actions.ts)
+      const data = new FormData();
+      data.append("fullName", formData.fullName);
+      data.append("usn", formData.usn);
+      data.append("branch", formData.branch);
+      data.append("semester", formData.semester);
+      data.append("dob", formData.dob);
+      data.append("bio", formData.bio);
 
-    if (result.message === "success") {
-      // Reload the page so the dashboard appears
-      router.refresh();
-      // Optional: Force a hard reload to ensure data updates
-      window.location.reload(); 
-    } else {
-      alert("Something went wrong");
+      // 2. Call the Server Action
+      const result = await completeOnboarding(data);
+
+      if (result.message === "success") {
+        // 3. Reload user to refresh metadata & redirect
+        await user?.reload();
+        router.refresh(); 
+      } else {
+        alert("Something went wrong. Try again.");
+      }
+    } catch (error) {
+      console.error("Onboarding Error:", error);
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-200">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Welcome to College Portal</h2>
-      <p className="mb-6 text-gray-600 text-center text-sm">Please finish your profile to continue.</p>
+    <div className="bg-black/80 backdrop-blur-md p-8 rounded-2xl border border-red-600 shadow-[0_0_50px_rgba(220,38,38,0.5)] max-w-2xl mx-auto mt-10 animate-card">
+      
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-white mb-2 uppercase tracking-widest">
+          Identity Protocol
+        </h2>
+        <p className="text-gray-400 text-sm">
+          Required to access the Batcomputer network.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
         
-        {/* Full Name */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Full Name</label>
-          <input 
-            name="fullName" 
-            required 
-            defaultValue={user?.fullName || ""}
-            className="mt-1 block w-full p-2 border border-gray-300 rounded-md text-black" 
-            placeholder="Enter your full name"
-          />
-        </div>
-
-        {/* USN */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">USN (University Seat No)</label>
-          <input 
-            name="usn" 
-            required 
-            className="mt-1 block w-full p-2 border border-gray-300 rounded-md text-black" 
-            placeholder="4VP..."
-          />
-        </div>
-
-        {/* Branch & Semester Row */}
-        <div className="flex gap-4">
-          <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700">Branch</label>
-            <select name="branch" className="mt-1 block w-full p-2 border border-gray-300 rounded-md text-black">
-              <option value="CSE">CSE</option>
-              <option value="ISE">ISE</option>
-              <option value="ECE">ECE</option>
-              <option value="MECH">MECH</option>
-              <option value="CIVIL">CIVIL</option>
-            </select>
+        {/* ROW 1: Name & USN */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Full Name</label>
+            <input 
+              type="text"
+              className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all"
+              value={formData.fullName}
+              onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+              required
+            />
           </div>
-          
-          <div className="w-1/2">
-            <label className="block text-sm font-medium text-gray-700">Semester</label>
-            <select name="semester" className="mt-1 block w-full p-2 border border-gray-300 rounded-md text-black">
-              <option value="1">1st</option>
-              <option value="3">3rd</option>
-              <option value="5">5th</option>
-              <option value="7">7th</option>
-            </select>
+          <div>
+            <label className="block text-gray-400 text-xs font-bold uppercase mb-2">USN (ID)</label>
+            <input 
+              type="text"
+              placeholder="1MJ..."
+              className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all uppercase"
+              value={formData.usn}
+              onChange={(e) => setFormData({...formData, usn: e.target.value})}
+              required
+            />
           </div>
         </div>
 
-        {/* DOB */}
+        {/* ROW 2: Branch & Semester */}
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Branch</label>
+            <select 
+              className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all appearance-none"
+              value={formData.branch}
+              onChange={(e) => setFormData({...formData, branch: e.target.value})}
+              required
+            >
+              <option value="" disabled className="text-gray-500">Select Branch</option>
+              <option value="CSE">CSE (Computer Science)</option>
+              <option value="ISE">ISE (Information Science)</option>
+              <option value="ECE">ECE (Electronics)</option>
+              <option value="MECH">Mechanical</option>
+              <option value="CIVIL">Civil</option>
+              <option value="AIML">AI & ML</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Semester</label>
+            <select 
+              className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all appearance-none"
+              value={formData.semester}
+              onChange={(e) => setFormData({...formData, semester: e.target.value})}
+              required
+            >
+              <option value="" disabled>Select Semester</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                <option key={sem} value={sem}>{sem} Semester</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* ROW 3: DOB */}
         <div>
-          <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+          <label className="block text-gray-400 text-xs font-bold uppercase mb-2">Date of Birth</label>
           <input 
-            type="date" 
-            name="dob" 
-            required 
-            className="mt-1 block w-full p-2 border border-gray-300 rounded-md text-black"
+            type="date"
+            className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all [color-scheme:dark]"
+            value={formData.dob}
+            onChange={(e) => setFormData({...formData, dob: e.target.value})}
+            required
           />
         </div>
 
+        {/* 🌟 ROW 4: BIO (The Mission) 🌟 */}
+        <div>
+          <label className="block text-gray-400 text-xs font-bold uppercase mb-2">
+            Bio (Your Mission)
+          </label>
+          <textarea 
+            className="w-full bg-black/50 border border-gray-700 rounded-lg p-3 text-white focus:border-red-600 focus:ring-1 focus:ring-red-600 outline-none transition-all resize-none placeholder:text-gray-600"
+            rows={3}
+            placeholder="E.g. Aspiring Developer | Gym Rat | 'I am Vengeance'"
+            value={formData.bio}
+            onChange={(e) => setFormData({...formData, bio: e.target.value})}
+            required
+          />
+        </div>
+
+        {/* SUBMIT BUTTON */}
         <button 
           type="submit" 
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition mt-4"
+          className="w-full bg-white text-black font-extrabold text-lg py-4 rounded-lg hover:bg-red-600 hover:text-white hover:shadow-[0_0_20px_rgba(220,38,38,0.6)] transition-all duration-300 uppercase tracking-widest mt-6"
         >
-          {loading ? "Saving Profile..." : "Complete Onboarding"}
+          {loading ? "INITIALIZING..." : "ENTER SYSTEM"}
         </button>
+
       </form>
     </div>
   );
