@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { db } from "@/db";
 import { users, followers } from "@/db/schema";
 import { auth } from "@clerk/nextjs/server";
@@ -7,14 +9,19 @@ import NetworkList from "./NetworkList";
 export default async function NetworkPage() {
   const { userId: myId } = await auth();
   
+  // 🌟 THE CRITICAL FIX: Build-time Null Guard
+  // This prevents the build process from crashing when no user session exists.
+  if (!myId) {
+    return <div className="min-h-screen bg-black" />;
+  }
+
   // 1. Fetch all students registered in your database
   const allUsers = await db.select().from(users);
   
   // 2. Fetch the list of people you already follow 
-  // This ensures the buttons show "Unfollow" for people you already know
-  const myFollows = myId 
-    ? await db.select().from(followers).where(eq(followers.followerId, myId))
-    : [];
+  const myFollows = await db.select()
+    .from(followers)
+    .where(eq(followers.followerId, myId));
   
   const followingIds = new Set(myFollows.map(f => f.followingId));
 
@@ -35,9 +42,7 @@ export default async function NetworkPage() {
           </p>
         </div>
 
-        {/* 3. PASS DATA TO THE LIST COMPONENT
-          We filter out 'myId' so you don't see yourself in the discovery list.
-        */}
+        {/* 3. PASS DATA TO THE LIST COMPONENT */}
         <NetworkList 
           allUsers={allUsers.filter(u => u.id !== myId)} 
           followingIds={Array.from(followingIds)} 
