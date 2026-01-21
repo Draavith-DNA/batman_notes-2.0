@@ -1,3 +1,6 @@
+// 🌟 FIX 1: Explicitly force the page to be dynamic
+export const dynamic = "force-dynamic";
+
 import { currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { userBadges } from "@/db/schema";
@@ -5,16 +8,27 @@ import { eq } from "drizzle-orm";
 import { getFollowStats } from "../actions";
 import BioEditor from "./BioEditor";
 import Link from "next/link";
-import BadgeGallery from "./BadgeGallery"; // 🌟 Import the new component
+import BadgeGallery from "./BadgeGallery";
 
 export default async function ProfilePage() {
+  // Fetch current user session
   const user = await currentUser();
 
-  if (!user) return <div className="min-h-screen bg-black" />;
+  // 🌟 FIX 2: THE BUILD-TIME GUARD
+  // During 'npm run build', user will be null. 
+  // This return statement prevents the code below (which needs user.id) from crashing.
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   const metadata = user.publicMetadata;
   const userUsn = (metadata.usn as string) || "UNKNOWN";
   
+  // Database queries now have a guaranteed USN/ID
   const assets = await db
     .select()
     .from(userBadges)
@@ -34,7 +48,7 @@ export default async function ProfilePage() {
             <div className="relative">
               <img 
                 src={user.imageUrl} 
-                alt="" 
+                alt="Profile" 
                 className="w-32 h-32 rounded-full border-2 border-red-600 object-cover"
               />
             </div>
