@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css"; // This imports the Tailwind styles we just fixed
+import { Geist } from "next/font/google";
+import "./globals.css"; 
 import { ClerkProvider, SignedIn, UserButton } from '@clerk/nextjs'
+import { currentUser } from '@clerk/nextjs/server';
 import Link from "next/link";
 import { dark } from '@clerk/themes';
 
@@ -10,27 +11,35 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Batman 2.0",
-  description: "Campus Connect App",
+  title: "BATMAN 2.0",
+  description: "Campus Intelligence Network",
+  icons: {
+    icon: "/favicon.ico?v=2", 
+    apple: "/favicon.ico?v=2",
+  },
 };
 
-export default function RootLayout({
+// 🌟 Ensure this is exactly "export default async function"
+export default async function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  let user = null;
+  try {
+    user = await currentUser();
+  } catch (e) {
+    user = null;
+  }
+
+  const isOnboarded = !!user?.publicMetadata?.onboardingComplete;
+
   return (
     <ClerkProvider appearance={{ baseTheme: dark }}>
       <html lang="en">
         <body 
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-          // 🌟 GLOBAL BACKGROUND IMAGE APPLIED HERE 🌟
+          className={`${geistSans.variable} antialiased text-white`}
           style={{
             backgroundImage: "url('/background.jpg')",
             backgroundSize: "cover",
@@ -40,23 +49,40 @@ export default function RootLayout({
             minHeight: "100vh"
           }}
         >
-          
-          {/* Navbar (Only shows when Signed In) */}
+          <div className="fixed inset-0 bg-black/40 z-[-1]" />
+
           <SignedIn>
-            {/* Made Navbar semi-transparent so image shows through */}
-            <nav className="bg-black/80 backdrop-blur-md text-white border-b border-gray-800 px-6 py-4 flex justify-between items-center shadow-md fixed top-0 w-full z-50">
-              <Link href="/" className="text-xl font-bold tracking-tight hover:text-gray-300 transition">
-                Batman 2.0 🦇
-              </Link>
-              <div className="flex items-center gap-6">
-                <Link href="/" className="text-gray-400 hover:text-white font-medium text-sm">Home</Link>
-                <Link href="/about" className="text-gray-400 hover:text-white font-medium text-sm">About</Link>
-                <Link href="/profile" className="text-gray-400 hover:text-white font-medium text-sm">Profile</Link>
-                <UserButton afterSignOutUrl="/" />
-              </div>
-            </nav>
-            {/* Spacer to push content down below fixed navbar */}
-            <div className="h-16"></div>
+            {user && isOnboarded && (
+              <>
+                <nav className="bg-black/90 backdrop-blur-xl border-b border-red-900/10 px-10 py-6 flex justify-between items-center fixed top-0 w-full z-50">
+                  <Link href="/" className="group">
+                    <span className="font-black text-2xl tracking-[0.4em] uppercase transition-all group-hover:text-red-600 duration-700">
+                      BATMAN<span className="text-red-600">.</span>2.0
+                    </span>
+                  </Link>
+                  
+                  <div className="flex items-center gap-10">
+                    <Link href="/dashboard" className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-red-500 transition-all duration-500">
+                      Notes
+                    </Link>
+                    <Link href="/network" className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-white transition-all duration-500">
+                      Networks
+                    </Link>
+                    <Link href="/about" className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-white transition-all duration-500">
+                      About
+                    </Link>
+                    <Link href="/profile" className="text-[10px] font-black uppercase tracking-[0.4em] text-gray-400 hover:text-white transition-all duration-500">
+                      Profile
+                    </Link>
+                    
+                    <div className="border-l border-white/10 pl-6 ml-2">
+                      <UserButton afterSignOutUrl="/" />
+                    </div>
+                  </div>
+                </nav>
+                <div className="h-24"></div>
+              </>
+            )}
           </SignedIn>
 
           {children}
