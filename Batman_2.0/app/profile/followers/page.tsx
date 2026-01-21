@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users, followers } from "@/db/schema";
@@ -7,7 +9,12 @@ import FollowButton from "../../network/FollowButton";
 
 export default async function FollowersPage() {
   const { userId } = await auth();
-  if (!userId) return <div>Sign in required</div>;
+
+  // 🌟 THE BUILD-TIME GUARD: 
+  // Prevents the Vercel build from crashing when no user session exists.
+  if (!userId) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   const myFollowers = await db.select().from(followers).where(eq(followers.followingId, userId));
   
@@ -53,7 +60,7 @@ export default async function FollowersPage() {
                             <div className="w-28">
                                 <FollowButton 
                                     targetUserId={student.id} 
-                                    initialIsFollowing={myFollowingIds.has(student.id)} // 🌟 FIXED PROP NAME
+                                    initialIsFollowing={myFollowingIds.has(student.id)}
                                 />
                             </div>
                         </div>
