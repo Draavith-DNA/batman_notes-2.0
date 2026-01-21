@@ -1,19 +1,28 @@
+'use client'; // 🌟 MUST BE THE FIRST LINE
+
 export const dynamic = "force-dynamic";
 
-import { uploadNote } from "../actions"; 
 import { useState } from "react";
-import { auth } from "@clerk/nextjs/server";
+import { uploadNote } from "../actions"; 
+import { useAuth } from "@clerk/nextjs"; // 🌟 FIXED: Use client-side hook
 
 export default function UploadPage() {
+  const { userId, isLoaded } = useAuth(); // 🌟 FIXED: Client-side auth hook
   const [status, setStatus] = useState("");
   const [selectedSem, setSelectedSem] = useState("1"); // Default to 1st Year
 
-  // 🌟 THE BUILD-TIME GUARD: 
-  // Prevents Vercel from crashing during 'npm run build' when there is no user session.
-  // Note: Since this is a Client Component, we handle the check inside the component 
-  // or via middleware. However, to keep it 'Vercel-proof' for dynamic data fetching 
-  // if you add any, this is the pattern.
-  
+  // 🌟 BUILD-TIME & AUTH GUARD:
+  // Prevents the component from attempting logic before Clerk is loaded
+  // or crashing during the Vercel build process.
+  if (!isLoaded) return null; 
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-mono text-xs tracking-widest uppercase">
+        Access Denied // Authorization Required
+      </div>
+    );
+  }
+
   async function handleSubmit(formData: FormData) {
     setStatus("INITIALIZING UPLOAD...");
     

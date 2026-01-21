@@ -1,50 +1,72 @@
-'use client';
+'use client'; // 🌟 Required at the very top
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { bulkPromoteSemester, bulkSwitchCycle, grantBadge } from "@/app/actions";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs"; // 🌟 Client-side hook
 
 export default function AdminPage() {
   const { userId, isLoaded } = useAuth();
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>(["[SYSTEM READY] awaiting commands..."]);
+  const [mounted, setMounted] = useState(false);
+
+  // 🌟 Ensure component is mounted to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
 
-  // 🌟 THE BUILD-TIME & AUTH GUARD:
-  // Since this is a client component, we check if Clerk is loaded and if a user exists.
-  // This prevents any accidental execution during build or by unauthorized visitors.
-  if (!isLoaded) return null; 
+  // 🌟 BUILD-TIME & AUTH GUARD:
+  // Prevents the build process from crashing and protects the route.
+  if (!mounted || !isLoaded) return null; 
+  
   if (!userId) {
-    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-mono text-xs tracking-widest uppercase">Access Denied // Authorization Required</div>;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-mono text-xs tracking-widest uppercase">
+        Access Denied // Authorization Required
+      </div>
+    );
   }
 
   async function handleBulkPromote(current: string, next: string) {
     setLoading(true);
     addLog(`INITIATING MASS ELEVATION: SEM ${current} -> ${next}`);
-    const res = await bulkPromoteSemester(current, next);
-    if (res.success) addLog(`SUCCESS: ${res.count} agents promoted.`);
-    else addLog(`ERROR: Process interrupted.`);
+    try {
+      const res = await bulkPromoteSemester(current, next);
+      if (res.success) addLog(`SUCCESS: ${res.count} agents promoted.`);
+      else addLog(`ERROR: Process interrupted.`);
+    } catch (err) {
+      addLog(`ERROR: System failure.`);
+    }
     setLoading(false);
   }
 
   async function handleCycleFlip(from: string, to: string) {
     setLoading(true);
     addLog(`INITIATING CYCLE ROTATION: ${from} -> ${to}`);
-    const res = await bulkSwitchCycle(from, to);
-    if (res.success) addLog(`SUCCESS: ${res.count} agents rotated.`);
-    else addLog(`ERROR: Rotation failed.`);
+    try {
+      const res = await bulkSwitchCycle(from, to);
+      if (res.success) addLog(`SUCCESS: ${res.count} agents rotated.`);
+      else addLog(`ERROR: Rotation failed.`);
+    } catch (err) {
+      addLog(`ERROR: Rotation logic failure.`);
+    }
     setLoading(false);
   }
 
   async function handleManualBadge(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const res = await grantBadge(formData);
-    addLog(res.message);
-    if (res.success) (e.target as HTMLFormElement).reset();
+    try {
+      const res = await grantBadge(formData);
+      addLog(res.message);
+      if (res.success) (e.target as HTMLFormElement).reset();
+    } catch (err) {
+      addLog("ERROR: Badge authorization failed.");
+    }
   }
 
   return (
@@ -62,8 +84,9 @@ export default function AdminPage() {
               {[["1", "2"], ["2", "3"], ["3", "4"], ["4", "5"], ["5", "6"], ["6", "7"], ["7", "8"]].map(([cur, nxt]) => (
                 <button 
                   key={cur}
+                  disabled={loading}
                   onClick={() => handleBulkPromote(cur, nxt)}
-                  className="w-full text-left p-3 border border-white/5 hover:border-red-600 transition-all text-[9px] font-bold uppercase tracking-widest"
+                  className="w-full text-left p-3 border border-white/5 hover:border-red-600 disabled:opacity-50 transition-all text-[9px] font-bold uppercase tracking-widest"
                 >
                   Promote: {cur} Sem → {nxt} Sem
                 </button>
@@ -75,8 +98,8 @@ export default function AdminPage() {
           <div className="border border-white/10 p-8 rounded-3xl bg-white/[0.02]">
             <h2 className="text-red-600 text-[10px] font-black mb-6 uppercase tracking-[0.4em]">Cycle Rotation</h2>
             <div className="space-y-3">
-              <button onClick={() => handleCycleFlip("C-Cycle", "P-Cycle")} className="w-full text-left p-3 border border-white/5 hover:border-red-600 transition-all text-[9px] font-bold uppercase tracking-widest">Rotate: C-Cycle → P-Cycle</button>
-              <button onClick={() => handleCycleFlip("P-Cycle", "C-Cycle")} className="w-full text-left p-3 border border-white/5 hover:border-red-600 transition-all text-[9px] font-bold uppercase tracking-widest">Rotate: P-Cycle → C-Cycle</button>
+              <button disabled={loading} onClick={() => handleCycleFlip("C-Cycle", "P-Cycle")} className="w-full text-left p-3 border border-white/5 hover:border-red-600 disabled:opacity-50 transition-all text-[9px] font-bold uppercase tracking-widest">Rotate: C-Cycle → P-Cycle</button>
+              <button disabled={loading} onClick={() => handleCycleFlip("P-Cycle", "C-Cycle")} className="w-full text-left p-3 border border-white/5 hover:border-red-600 disabled:opacity-50 transition-all text-[9px] font-bold uppercase tracking-widest">Rotate: P-Cycle → C-Cycle</button>
               
               <div className="mt-12 pt-8 border-t border-white/10">
                 <h2 className="text-gray-500 text-[10px] font-black mb-4 uppercase tracking-[0.4em]">Manual Asset Grant</h2>
@@ -87,7 +110,7 @@ export default function AdminPage() {
                     <option value="MODERATOR">Moderator</option>
                     <option value="LEGEND">Legend</option>
                   </select>
-                  <button type="submit" className="w-full bg-white text-black py-3 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all">Authorize Badge</button>
+                  <button type="submit" disabled={loading} className="w-full bg-white text-black py-3 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white disabled:opacity-50 transition-all">Authorize Badge</button>
                 </form>
               </div>
             </div>
