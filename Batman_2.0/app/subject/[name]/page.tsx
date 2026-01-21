@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { eq, and, or } from 'drizzle-orm';

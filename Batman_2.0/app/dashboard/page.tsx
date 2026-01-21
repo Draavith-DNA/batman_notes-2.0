@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
