@@ -1,41 +1,57 @@
 export const dynamic = "force-dynamic";
+
 import { currentUser } from '@clerk/nextjs/server';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 export default async function DashboardPage() {
   const user = await currentUser();
+
+  // 🌟 THE CRITICAL FIX: Build-time Null Guard
+  // This prevents Next.js from crashing during 'npm run build'
+  if (!user) {
+    return <div className="min-h-screen bg-black" />;
+  }
 
   // 1. Get User Details from Metadata
   const userBranch = user?.publicMetadata?.branch as string;
   const userSemester = user?.publicMetadata?.semester as string;
   const userCycle = user?.publicMetadata?.cycle as string || "none";
+  const isOnboarded = user?.publicMetadata?.onboardingComplete === true;
+
+  // 🌟 SECURITY: Redirect if identity protocol isn't finished
+  if (!isOnboarded) {
+    redirect('/onboarding');
+  }
 
   // 2. SMART FILTERING LOGIC
   let userNotes: any[] = [];
   
-  if (userSemester) {
-    if (userSemester === "1") {
-      // 🌟 REVISED 1st YEAR LOGIC: 
-      // Ignore Branch. Only filter by Semester and Cycle.
-      userNotes = await db.select().from(notes).where(
-        and(
-          eq(notes.semester, userSemester),
-          eq(notes.cycle, userCycle) 
-        )
-      );
-    } else {
-      // 🌟 HIGHER SEM LOGIC: 
-      // Must match Branch and Semester (as subjects become branch-specific)
-      userNotes = await db.select().from(notes).where(
-        and(
-          eq(notes.branch, userBranch),
-          eq(notes.semester, userSemester)
-        )
-      );
+  try {
+    if (userSemester) {
+      if (userSemester === "1") {
+        // 🌟 1st YEAR LOGIC: Filter by Semester and Cycle
+        userNotes = await db.select().from(notes).where(
+          and(
+            eq(notes.semester, userSemester),
+            eq(notes.cycle, userCycle) 
+          )
+        );
+      } else {
+        // 🌟 HIGHER SEM LOGIC: Match Branch and Semester
+        userNotes = await db.select().from(notes).where(
+          and(
+            eq(notes.branch, userBranch),
+            eq(notes.semester, userSemester)
+          )
+        );
+      }
     }
+  } catch (error) {
+    console.error("Database Retrieval Error:", error);
   }
 
   // 3. Extract unique subject names for display
@@ -64,10 +80,11 @@ export default async function DashboardPage() {
         </div>
 
         {/* Subject Grid */}
+        
         {uniqueSubjects.length === 0 ? (
              <div className="p-20 text-center bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10">
                 <p className="text-gray-500 italic font-medium uppercase tracking-widest text-[10px]">
-                   No notes or text book found // be a contributor to add notes for your subjects.
+                    No notes or text book found // be a contributor to add notes for your subjects.
                 </p>
              </div>
           ) : (

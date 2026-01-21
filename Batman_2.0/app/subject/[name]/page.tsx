@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { eq, and, or } from 'drizzle-orm';
@@ -11,10 +12,17 @@ export default async function SubjectPage({
   params: Promise<{ name: string }> 
 }) {
   const user = await currentUser();
+
+  // 🌟 THE BUILD-TIME FIX: 
+  // This prevents Vercel from crashing during 'npm run build' when there is no user session.
+  if (!user) {
+    return <div className="min-h-screen bg-black" />;
+  }
+
   const { name } = await params;
   const subjectName = decodeURIComponent(name);
   
-  // Get User Profile Metadata
+  // Get User Profile Metadata safely using optional chaining
   const userBranch = (user?.publicMetadata?.branch as string) || "";
   const userSemester = (user?.publicMetadata?.semester as string) || "";
   const userCycle = (user?.publicMetadata?.cycle as string) || "none";
@@ -43,7 +51,7 @@ export default async function SubjectPage({
 
       <main className="max-w-4xl mx-auto relative z-10">
         
-        {/* DEBUG PANEL: Remove this once notes appear */}
+        {/* DEBUG PANEL: Useful for verifying profile matching */}
         <div className="mb-6 p-4 bg-red-600/10 border border-red-600/20 rounded-xl text-[10px] font-mono text-gray-400">
           <p>YOUR IN: [Subject: {subjectName}] [Branch: {userBranch}] [Sem: {userSemester}] [Cycle: {userCycle}]</p>
           <p>RESULTS_FOUND: {subjectNotes.length}</p>
@@ -128,7 +136,7 @@ export default async function SubjectPage({
         {/* System Footer */}
         <div className="mt-12 border-t border-white/5 pt-6 text-center">
             <p className="text-[9px] text-gray-600 uppercase tracking-[0.5em] font-black">
-                These Notes are sourced from fellow students. Verify authenticity before relying on them. // batmna-2.0
+                These Notes are sourced from fellow students. Verify authenticity before relying on them. // batman-2.0
             </p>
         </div>
       </main>
