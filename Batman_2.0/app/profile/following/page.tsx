@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users, followers } from "@/db/schema";
@@ -7,7 +8,9 @@ import FollowButton from "../../network/FollowButton";
 
 export default async function FollowingPage() {
   const { userId } = await auth();
-  if (!userId) return <div className="text-white p-10 font-bold tracking-widest uppercase text-center">Access Denied: Sign-in Required</div>;
+  if (!userId) {
+    return <div className="min-h-screen bg-black" />; 
+  }
 
   // 1. Get everyone the current user is following using an Inner Join
   const myFollowingList = await db

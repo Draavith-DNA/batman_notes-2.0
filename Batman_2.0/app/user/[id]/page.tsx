@@ -1,13 +1,22 @@
+export const dynamic = "force-dynamic";
+
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users, followers } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import FollowButton from "../../network/FollowButton";
-import { getFollowStats } from "@/app/actions"; // 🌟 Import the stats action
+import { getFollowStats } from "@/app/actions";
 
 export default async function PublicProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { userId: myId } = await auth();
+  
+  // 🌟 THE CRITICAL FIX: Build-time Null Guard
+  // Prevents the build process from crashing when no user session exists.
+  if (!myId) {
+    return <div className="min-h-screen bg-black" />;
+  }
+
   const { id: targetId } = await params; 
 
   // 1. Fetch User Details
@@ -18,14 +27,12 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   const stats = await getFollowStats(targetId);
 
   // 3. Check if current logged-in user is following this profile
-  let isFollowing = false;
-  if (myId) {
-    const followCheck = await db
-      .select()
-      .from(followers)
-      .where(and(eq(followers.followerId, myId), eq(followers.followingId, targetId)));
-    isFollowing = followCheck.length > 0;
-  }
+  const followCheck = await db
+    .select()
+    .from(followers)
+    .where(and(eq(followers.followerId, myId), eq(followers.followingId, targetId)));
+  
+  const isFollowing = followCheck.length > 0;
 
   return (
     <div className="min-h-screen pt-24 px-6 relative">
@@ -48,7 +55,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                     </p>
                   </div>
 
-                  {/* 🌟 STATS DISPLAY 🌟 */}
+                  {/* STATS DISPLAY */}
                   <div className="flex gap-6 text-white text-sm">
                     <div className="text-center">
                       <span className="font-bold block text-lg text-red-500">{stats.followerCount}</span>
@@ -65,7 +72,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
                   "{user.bio || "Protecting the campus in silence..."}"
                 </p>
                 
-                {myId && myId !== targetId && (
+                {myId !== targetId && (
                   <div className="w-40">
                     <FollowButton 
                       targetUserId={user.id} 

@@ -1,13 +1,25 @@
-'use client'
+'use client';
+
+export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { bulkPromoteSemester, bulkSwitchCycle, grantBadge } from "@/app/actions";
+import { useAuth } from "@clerk/nextjs";
 
 export default function AdminPage() {
+  const { userId, isLoaded } = useAuth();
   const [loading, setLoading] = useState(false);
   const [log, setLog] = useState<string[]>(["[SYSTEM READY] awaiting commands..."]);
 
   const addLog = (msg: string) => setLog(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+
+  // 🌟 THE BUILD-TIME & AUTH GUARD:
+  // Since this is a client component, we check if Clerk is loaded and if a user exists.
+  // This prevents any accidental execution during build or by unauthorized visitors.
+  if (!isLoaded) return null; 
+  if (!userId) {
+    return <div className="min-h-screen bg-black flex items-center justify-center text-red-600 font-mono text-xs tracking-widest uppercase">Access Denied // Authorization Required</div>;
+  }
 
   async function handleBulkPromote(current: string, next: string) {
     setLoading(true);
